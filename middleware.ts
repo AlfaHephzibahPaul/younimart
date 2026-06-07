@@ -61,13 +61,16 @@ export async function middleware(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_verified")
+      .select("verification_status")
       .eq("id", user.id)
       .single();
 
-    if (!profile?.is_verified) {
+    if (profile?.verification_status !== "approved") {
       const url = request.nextUrl.clone();
-      url.pathname = "/verification-pending";
+      url.pathname =
+        profile?.verification_status === "rejected"
+          ? "/resubmit-verification"
+          : "/verification-pending";
       return NextResponse.redirect(url);
     }
   }

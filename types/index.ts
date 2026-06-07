@@ -19,7 +19,7 @@ export interface Profile {
   email: string;
   phone: string | null;
   avatar_url: string | null;
-  is_verified: boolean;
+  verification_status: VerificationStatus;
   created_at: string;
   updated_at: string;
 }
