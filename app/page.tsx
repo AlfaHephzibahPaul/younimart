@@ -7,8 +7,8 @@ import { FUD_UNIVERSITY_SLUG } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 import type { Listing } from "@/types";
 
-type ListingWithSeller = Listing & {
-  seller: { full_name: string } | null;
+export type ListingWithSeller = Listing & {
+  seller: { full_name: string; is_verified?: boolean } | null;
 };
 
 type HomeProps = {
@@ -97,17 +97,19 @@ async function getListings(
 
   let listingsQuery = supabase
     .from("listings")
-    .select("*, seller:profiles!seller_id(full_name)")
+    .select("*, seller:profiles!seller_id(full_name, is_verified)")
     .eq("university_id", university.id)
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
-  if (category && category !== "All") {
-    listingsQuery = listingsQuery.eq("category", category);
+  if (category && category !== "All" && category !== "all") {
+    listingsQuery = listingsQuery.eq("category", category.trim());
   }
 
   if (query?.trim()) {
-    listingsQuery = listingsQuery.ilike("title", `%${query.trim()}%`);
+    const q = query.trim();
+    // Search in both title and description
+    listingsQuery = listingsQuery.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
   }
 
   const { data } = await listingsQuery;

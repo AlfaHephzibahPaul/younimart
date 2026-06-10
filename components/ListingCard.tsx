@@ -19,7 +19,7 @@ const CONDITION_STYLES: Record<ListingCondition, string> = {
 
 export type ListingCardProps = {
   listing: Listing & {
-    seller?: { full_name: string } | null;
+    seller?: { full_name: string; is_verified?: boolean } | null;
   };
 };
 
@@ -46,7 +46,7 @@ function PlaceholderImage() {
 }
 
 export default function ListingCard({ listing }: ListingCardProps) {
-  const imageUrl = listing.images?.[0];
+  const imageUrl = listing.photos?.[0];
   const sellerName = listing.seller?.full_name ?? "Unknown seller";
 
   return (
