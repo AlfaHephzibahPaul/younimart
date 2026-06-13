@@ -46,7 +46,8 @@ function PlaceholderImage() {
 }
 
 export default function ListingCard({ listing }: ListingCardProps) {
-  const imageUrl = listing.photos?.[0];
+  // 🛠️ FIX: Read directly from image_url instead of the photos array
+  const imageUrl = listing.image_url;
   const sellerName = listing.seller?.full_name ?? "Unknown seller";
 
   return (
@@ -62,26 +63,27 @@ export default function ListingCard({ listing }: ListingCardProps) {
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
+            unoptimized // Keeps Next.js from throwing domain hostname errors for external Supabase CDN links
           />
         ) : (
           <PlaceholderImage />
         )}
 
         <span
-          className={`absolute left-2 top-2 rounded-md px-2 py-1 text-xs font-semibold ${CONDITION_STYLES[listing.condition]}`}
+          className={`absolute left-2 top-2 rounded-md px-2 py-1 text-xs font-semibold ${CONDITION_STYLES[listing.condition] || "bg-gray-500 text-white"}`}
         >
-          {CONDITION_LABELS[listing.condition]}
+          {CONDITION_LABELS[listing.condition] || listing.condition}
         </span>
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-brand-green">
+        <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-brand-green TEXT-LEFT" style={{ textAlign: 'left' }}>
           {listing.title}
         </h3>
-        <p className="text-lg font-bold text-brand-orange">
+        <p className="text-lg font-bold text-brand-orange" style={{ textAlign: 'left' }}>
           {formatPrice(listing.price)}
         </p>
-        <p className="text-xs text-gray-500">{listing.category}</p>
+        <p className="text-xs text-gray-500" style={{ textAlign: 'left' }}>{listing.category}</p>
         <div className="mt-auto flex items-center justify-between pt-2 text-xs text-gray-500">
           <span className="truncate">{sellerName}</span>
           <span className="shrink-0">{formatTimeAgo(listing.created_at)}</span>
