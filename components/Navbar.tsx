@@ -86,7 +86,7 @@ export default function Navbar() {
           </Link>
           {user && (
             <Link
-              href="/post"
+              href="/create-listing"
               className="text-sm font-medium text-white/90 transition-colors hover:text-white"
             >
               Post an Ad
