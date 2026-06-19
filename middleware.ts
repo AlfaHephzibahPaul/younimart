@@ -1,12 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Cleaned up public routes — removed the obsolete pending route
 const PUBLIC_ROUTES = [
   "/",
   "/login",
   "/signup",
   "/verify",
-  "/verification-pending",
   "/resubmit-verification",
 ];
 
@@ -15,12 +15,18 @@ function isPublicRoute(pathname: string): boolean {
     if (route === "/") {
       return pathname === "/";
     }
-
     return pathname === route || pathname.startsWith(`${route}/`);
   });
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 1. QUICK SAFETY EXIT: If it's an API route, completely bypass Supabase checks
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -50,27 +56,25 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
+  // Protect Private Dashboard Routes
   if (!isPublicRoute(pathname)) {
+    // 1. Redirect unauthenticated users straight to login
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
 
+    // 2. Intercept authenticated users who haven't completed OTP verification
     const { data: profile } = await supabase
       .from("profiles")
-      .select("verification_status")
+      .select("is_verified")
       .eq("id", user.id)
       .single();
 
-    if (profile?.verification_status !== "approved") {
+    if (!profile || !profile.is_verified) {
       const url = request.nextUrl.clone();
-      url.pathname =
-        profile?.verification_status === "rejected"
-          ? "/resubmit-verification"
-          : "/verification-pending";
+      url.pathname = "/verify"; // Redirects them to the verification form screen instead!
       return NextResponse.redirect(url);
     }
   }
@@ -78,8 +82,9 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse;
 }
 
+// 2. UPDATED MATCHER: Added "api to the ignore patterns for maximum safety
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

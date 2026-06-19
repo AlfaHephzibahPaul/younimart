@@ -20,6 +20,8 @@ export interface Profile {
   phone: string | null;
   avatar_url: string | null;
   verification_status: VerificationStatus;
+  is_verified: boolean;
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 }

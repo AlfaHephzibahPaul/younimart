@@ -87,34 +87,32 @@ async function getListings(
 ): Promise<ListingWithSeller[]> {
   const supabase = await createClient();
 
-  const { data: university } = await supabase
-    .from("universities")
-    .select("id")
-    .eq("slug", FUD_UNIVERSITY_SLUG)
-    .single();
-
-  if (!university) return [];
-
+  // 🛠️ FIX: Added '!seller_id' explicit relationship hint to tell Supabase exactly how to join tables
   let listingsQuery = supabase
     .from("listings")
     .select("*, seller:profiles!seller_id(full_name, is_verified)")
-    .eq("university_id", university.id)
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
+  // Handle category filtration if selected
   if (category && category !== "All" && category !== "all") {
     listingsQuery = listingsQuery.eq("category", category.trim());
   }
 
+  // Handle active search inputs
   if (query?.trim()) {
     const q = query.trim();
-    // Search in both title and description
     listingsQuery = listingsQuery.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
   }
 
-  const { data } = await listingsQuery;
+  const { data, error } = await listingsQuery;
 
-  return (data as ListingWithSeller[]) ?? [];
+  if (error) {
+    console.error("Supabase data load error:", error.message);
+    return [];
+  }
+
+  return (data as any) ?? [];
 }
 
 export default async function HomePage({ searchParams }: HomeProps) {

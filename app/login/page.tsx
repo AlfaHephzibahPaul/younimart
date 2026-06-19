@@ -4,18 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { VerificationStatus } from "@/types";
-
-function getRedirectPath(status: VerificationStatus): string {
-  switch (status) {
-    case "pending":
-      return "/verification-pending";
-    case "rejected":
-      return "/resubmit-verification";
-    case "approved":
-      return "/";
-  }
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,9 +37,10 @@ export default function LoginPage() {
       return;
     }
 
+    // Fetch user's profile to check their verification status and is_verified flag
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("verification_status")
+      .select("verification_status, is_verified")
       .eq("id", authData.user.id)
       .single();
 
@@ -61,7 +50,18 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(getRedirectPath(profile.verification_status));
+    // Precise redirect conditions based on verification status
+    if (profile.verification_status === "pending") {
+      router.push("/verification-pending");
+    } else if (profile.verification_status === "rejected") {
+      router.push("/resubmit-verification");
+    } else if (profile.is_verified === true) {
+      router.push("/browse");
+    } else {
+      // Fallback for cases where they are not verified and don't have active pending/rejected status
+      router.push("/verify");
+    }
+
     router.refresh();
   }
 
@@ -71,7 +71,7 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <Link
             href="/"
-            className="text-2xl font-bold tracking-tight text-brand-green"
+            className="text-3xl font-extrabold tracking-tight text-brand-green hover:opacity-90 transition-opacity"
           >
             YOUnimart
           </Link>
@@ -83,69 +83,89 @@ export default function LoginPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+          className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4"
         >
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 border border-red-200">
               {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 outline-none ring-brand-green focus:border-brand-green focus:ring-2"
-                placeholder="you@fud.edu.ng"
-              />
-            </div>
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 outline-none ring-brand-green focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 transition-all"
+              placeholder="you@domain.edu.ng"
+            />
+          </div>
 
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Password
-                </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm font-medium text-brand-green hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 outline-none ring-brand-green focus:border-brand-green focus:ring-2"
-                placeholder="••••••••"
-              />
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium text-gray-700"
+              >
+                Password
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-brand-green hover:underline"
+              >
+                Forgot password?
+              </Link>
             </div>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 outline-none ring-brand-green focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 transition-all"
+              placeholder="••••••••"
+            />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="mt-6 w-full rounded-lg bg-brand-orange py-3 font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-lg bg-brand-orange py-3 font-semibold text-white transition-colors hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-brand-orange/50 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2 mt-6"
           >
+            {isLoading && (
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            )}
             {isLoading ? "Signing in..." : "Sign In"}
           </button>
 
-          <p className="mt-4 text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-gray-500 pt-2">
             Don&apos;t have an account?{" "}
             <Link
               href="/signup"
