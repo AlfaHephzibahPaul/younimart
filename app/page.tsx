@@ -87,19 +87,16 @@ async function getListings(
 ): Promise<ListingWithSeller[]> {
   const supabase = await createClient();
 
-  // 🛠️ FIX: Added '!seller_id' explicit relationship hint to tell Supabase exactly how to join tables
   let listingsQuery = supabase
     .from("listings")
     .select("*, seller:profiles!seller_id(full_name, is_verified)")
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
-  // Handle category filtration if selected
   if (category && category !== "All" && category !== "all") {
     listingsQuery = listingsQuery.eq("category", category.trim());
   }
 
-  // Handle active search inputs
   if (query?.trim()) {
     const q = query.trim();
     listingsQuery = listingsQuery.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
@@ -112,7 +109,23 @@ async function getListings(
     return [];
   }
 
-  return (data as any) ?? [];
+  const rawListings = (data as any) ?? [];
+
+  // 🛠️ FIX: Intercept the image paths and append the full public URL from Supabase Storage
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  // Change 'your-bucket-name' to whatever your actual bucket is named in Supabase (e.g. 'listings')
+  const bucketName = "your-bucket-name";
+
+  return rawListings.map((listing: any) => {
+    if (listing.image_url && !listing.image_url.startsWith("http")) {
+      return {
+        ...listing,
+        image_url: `${supabaseUrl}/storage/v1/object/public/${bucketName}/${listing.image_url}`,
+      };
+    }
+    return listing;
+  });
 }
 
 export default async function HomePage({ searchParams }: HomeProps) {

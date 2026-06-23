@@ -74,7 +74,7 @@ export default function Navbar() {
           href="/"
           className="shrink-0 text-xl font-bold tracking-tight text-white"
         >
-          YOUnimart
+          YoUnimart
         </Link>
 
         <div className="flex flex-1 items-center justify-center gap-4 sm:gap-8">
@@ -86,7 +86,7 @@ export default function Navbar() {
           </Link>
           {user && (
             <Link
-              href="/post"
+              href="/create-listing"
               className="text-sm font-medium text-white/90 transition-colors hover:text-white"
             >
               Post an Ad
