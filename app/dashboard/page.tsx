@@ -71,21 +71,23 @@ export default function DashboardPage() {
                 .delete()
                 .eq('id', listingId);
 
-            // 3. Add error handling (debug RLS policy blocks)
+            // 3. Catch silent failures (like Supabase Row-Level Security blocks)
             if (error) {
-                console.error('Failed to delete listing from Supabase database (check RLS policies):', error);
-                alert(`Error deleting listing: ${error.message}`);
+                console.error('CRITICAL: Supabase delete failed:', error.message);
+                alert(`Database error: ${error.message}. Check your Supabase RLS policies!`);
                 return;
             }
 
-            // 4. Purge server-side cache and refresh route data
+            // 4. Update the local layout state only AFTER backend confirms deletion
+            setListings((prev) => prev.filter((item) => item.id !== listingId));
+
+            // 5. Purge server-side cache and refresh route data so it reflects on home page
             await revalidateListings();
             router.refresh();
 
-            // 5. Only filter the item out of the local state array after verifying that error is null
-            setListings((prev) => prev.filter((item) => item.id !== listingId));
+            alert('Listing permanently deleted!');
         } catch (err: any) {
-            console.error('Error in handleDeleteListing:', err);
+            console.error('Unexpected error during deletion:', err);
             alert(err.message || 'Error deleting listing. Please try again.');
         } finally {
             setDeletingId(null);
@@ -118,7 +120,7 @@ export default function DashboardPage() {
                 const { data: userListings } = await supabase
                     .from('listings')
                     .select('*')
-                    .eq('seller_id', user.id) // Fixed: Changed from user_id to seller_id
+                    .eq('seller_id', user.id)
                     .order('created_at', { ascending: false });
 
                 if (userListings) {
@@ -143,7 +145,6 @@ export default function DashboardPage() {
             setUploadingAvatar(true);
             const file = e.target.files[0];
             const fileExt = file.name.split('.').pop();
-            // Saved directly in root directory of bucket
             const filePath = `avatar-${profile.id}-${Date.now()}.${fileExt}`;
 
             // Upload directly to root of 'listing-images' bucket
@@ -310,7 +311,7 @@ export default function DashboardPage() {
                                         <span className="absolute top-3 left-3 text-[10px] uppercase font-bold tracking-wider bg-white px-2 py-0.5 rounded-md shadow-sm text-slate-600 border border-gray-100">
                                             {item.category}
                                         </span>
-                                        
+
                                         {/* Delete Button Overlay */}
                                         <button
                                             type="button"

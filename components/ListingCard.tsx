@@ -46,8 +46,8 @@ function PlaceholderImage() {
 }
 
 export default function ListingCard({ listing }: ListingCardProps) {
-  // 🛠️ FIX: Read directly from image_url instead of the photos array
-const imageUrl = listing.images?.[0];
+  // 🛠️ FIX: Correctly map to the absolute public URL constructed in page.tsx
+  const imageUrl = listing.image_url;
   const sellerName = listing.seller?.full_name ?? "Unknown seller";
 
   return (
@@ -77,7 +77,7 @@ const imageUrl = listing.images?.[0];
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-brand-green TEXT-LEFT" style={{ textAlign: 'left' }}>
+        <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-brand-green" style={{ textAlign: 'left' }}>
           {listing.title}
         </h3>
         <p className="text-lg font-bold text-brand-orange" style={{ textAlign: 'left' }}>
