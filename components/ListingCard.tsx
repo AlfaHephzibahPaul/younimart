@@ -47,7 +47,7 @@ function PlaceholderImage() {
 
 export default function ListingCard({ listing }: ListingCardProps) {
   // 🛠️ FIX: Read directly from image_url instead of the photos array
-const imageUrl = listing.images?.[0];
+const imageUrl = listing.image_urls?.[0];
   const sellerName = listing.seller?.full_name ?? "Unknown seller";
 
   return (

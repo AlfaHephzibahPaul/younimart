@@ -35,7 +35,7 @@ export interface Listing {
   price: number;
   category: string;
   condition: ListingCondition;
-  images: string[];
+ image_urls: string[];
   status: ListingStatus;
   created_at: string;
   updated_at: string;
