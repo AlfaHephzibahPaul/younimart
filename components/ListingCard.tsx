@@ -77,7 +77,7 @@ const imageUrl = listing.image_urls?.[0];
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-brand-green TEXT-LEFT" style={{ textAlign: 'left' }}>
+        <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-brand-green" style={{ textAlign: 'left' }}>
           {listing.title}
         </h3>
         <p className="text-lg font-bold text-brand-orange" style={{ textAlign: 'left' }}>

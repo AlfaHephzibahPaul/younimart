@@ -27,48 +27,12 @@ function EmptyListings() {
         className="mb-6 h-40 w-48 text-brand-green/30"
         aria-hidden="true"
       >
-        <rect
-          x="20"
-          y="40"
-          width="160"
-          height="100"
-          rx="12"
-          fill="currentColor"
-          opacity="0.15"
-        />
-        <rect
-          x="35"
-          y="55"
-          width="60"
-          height="45"
-          rx="6"
-          fill="currentColor"
-          opacity="0.25"
-        />
-        <rect
-          x="105"
-          y="55"
-          width="60"
-          height="20"
-          rx="4"
-          fill="currentColor"
-          opacity="0.25"
-        />
-        <rect
-          x="105"
-          y="85"
-          width="40"
-          height="15"
-          rx="4"
-          fill="currentColor"
-          opacity="0.2"
-        />
+        <rect x="20" y="40" width="160" height="100" rx="12" fill="currentColor" opacity="0.15" />
+        <rect x="35" y="55" width="60" height="45" rx="6" fill="currentColor" opacity="0.25" />
+        <rect x="105" y="55" width="60" height="20" rx="4" fill="currentColor" opacity="0.25" />
+        <rect x="105" y="85" width="40" height="15" rx="4" fill="currentColor" opacity="0.2" />
         <circle cx="100" cy="25" r="18" fill="currentColor" opacity="0.2" />
-        <path
-          d="M90 25 L100 15 L110 25 L100 35 Z"
-          fill="currentColor"
-          opacity="0.35"
-        />
+        <path d="M90 25 L100 15 L110 25 L100 35 Z" fill="currentColor" opacity="0.35" />
       </svg>
       <h2 className="text-xl font-semibold text-gray-800">
         No listings yet. Be the first to post something!
@@ -85,34 +49,64 @@ async function getListings(
   query?: string,
   category?: string
 ): Promise<ListingWithSeller[]> {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  // 🛠️ FIX: Added '!seller_id' explicit relationship hint to tell Supabase exactly how to join tables
-  let listingsQuery = supabase
-    .from("listings")
-    .select("*, seller:profiles!seller_id(full_name, is_verified)")
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
+    let listingsQuery = supabase
+      .from("listings")
+      .select("*, seller:profiles!seller_id(full_name, is_verified)")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
 
-  // Handle category filtration if selected
-  if (category && category !== "All" && category !== "all") {
-    listingsQuery = listingsQuery.eq("category", category.trim());
-  }
+    // Normalize category checks to account for variations like Clothing vs Fashion
+    if (category && category !== "All" && category !== "all") {
+      let targetCat = category.trim();
+      if (targetCat === "Fashion") {
+        listingsQuery = listingsQuery.in("category", ["Fashion", "Clothing"]);
+      } else {
+        listingsQuery = listingsQuery.eq("category", targetCat);
+      }
+    }
 
-  // Handle active search inputs
-  if (query?.trim()) {
-    const q = query.trim();
-    listingsQuery = listingsQuery.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
-  }
+    if (query?.trim()) {
+      const q = query.trim();
+      listingsQuery = listingsQuery.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+    }
 
-  const { data, error } = await listingsQuery;
+    const { data, error } = await listingsQuery;
 
-  if (error) {
-    console.error("Supabase data load error:", error.message);
+    if (error) {
+      console.error("Supabase data load error:", error.message);
+      return [];
+    }
+
+    const rawListings = (data as any) ?? [];
+    const bucketName = "listing-images";
+
+    // Direct manual fallback to match your exact project config domain
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://your-project.supabase.co";
+
+    return rawListings.map((listing: any) => {
+      if (!listing.image_url) {
+        return listing;
+      }
+
+      if (listing.image_url.startsWith("http")) {
+        return listing;
+      }
+
+      // Explicitly construct the public CDN asset path
+      const publicUrl = `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/${bucketName}/${listing.image_url}`;
+
+      return {
+        ...listing,
+        image_url: publicUrl,
+      };
+    });
+  } catch (catchErr) {
+    console.error("Network connection breakdown inside server-side getListings:", catchErr);
     return [];
   }
-
-  return (data as any) ?? [];
 }
 
 export default async function HomePage({ searchParams }: HomeProps) {

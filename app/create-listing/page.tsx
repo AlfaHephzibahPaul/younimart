@@ -5,6 +5,16 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from "@/components/Navbar";
 
+// 🛠️ Core Marketplace Categories Array (Matches Homepage Pills exactly)
+const MARKETPLACE_CATEGORIES = [
+  "Electronics",
+  "Books",
+  "Fashion",
+  "Food & Drinks",
+  "Home Essentials",
+  "Services"
+];
+
 export default function CreateListingPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -108,7 +118,7 @@ export default function CreateListingPage() {
 
     try {
       const targetBucket = 'listing-images';
-      const uploadedImageUrls: string[] = [];
+      const uploadedImageNames: string[] = []; // 🛠️ Track relative file path names instead of full external URLs
 
       // Loop and upload all files concurrently
       await Promise.all(
@@ -127,16 +137,13 @@ export default function CreateListingPage() {
             throw new Error(`Storage Upload Failed for image ${index + 1}: ${uploadError.message}`);
           }
 
-          const { data: { publicUrl } } = supabase.storage
-            .from(targetBucket)
-            .getPublicUrl(fileName);
-
-          uploadedImageUrls.push(publicUrl);
+          // 🛠️ Save ONLY the path filename relative to the bucket storage system
+          uploadedImageNames.push(fileName);
         })
       );
 
-      // Extract the first item to serve as the cover image placeholder
-      const primaryCoverUrl = uploadedImageUrls[0] || null;
+      // Extract the first item name to serve as the main cover image placeholder
+      const primaryCoverName = uploadedImageNames[0] || null;
 
       // Submit listing values to database payload columns
       const { error: insertError } = await supabase
@@ -151,8 +158,8 @@ export default function CreateListingPage() {
           category,
           condition,
           location,
-          image_url: primaryCoverUrl,
-          image_urls: uploadedImageUrls,
+          image_url: primaryCoverName, // 🛠️ Saves relative key reference name string
+          image_urls: uploadedImageNames, // 🛠️ Saves array of key filenames
           whatsapp_number: whatsappNumber,
           status: 'active'
         });
@@ -215,11 +222,11 @@ export default function CreateListingPage() {
                   className="mt-1.5 block w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50/50 text-slate-900 text-sm outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="">Select category</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Books">Books</option>
-                  <option value="Clothing">Clothing</option>
-                  <option value="Hostel Gear">Hostel Gear</option>
-                  <option value="Others">Others</option>
+                  {MARKETPLACE_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
                 </select>
               </div>
 

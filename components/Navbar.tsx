@@ -74,7 +74,7 @@ export default function Navbar() {
           href="/"
           className="shrink-0 text-xl font-bold tracking-tight text-white"
         >
-          YOUnimart
+          YoUnimart
         </Link>
 
         <div className="flex flex-1 items-center justify-center gap-4 sm:gap-8">

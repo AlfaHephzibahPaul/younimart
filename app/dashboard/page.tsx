@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { revalidateListings } from './actions';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -14,6 +15,84 @@ export default function DashboardPage() {
     const [profile, setProfile] = useState<any>(null);
     const [listings, setListings] = useState<any[]>([]);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    const handleDeleteListing = async (listingId: string) => {
+        if (!confirm('Are you sure you want to delete this listing?')) return;
+
+        try {
+            setDeletingId(listingId);
+
+            // 1. Initialize and call the Supabase client inside the delete function
+            const supabase = createClient();
+
+            // Find the listing to get its image URLs before deletion
+            const listingToDelete = listings.find((item) => item.id === listingId);
+
+            // Delete associated storage files
+            if (listingToDelete) {
+                const deleteStorageFile = async (url: string) => {
+                    try {
+                        const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+                        if (match) {
+                            const bucket = match[1];
+                            const path = match[2];
+                            await supabase.storage.from(bucket).remove([path]);
+                        }
+                    } catch (e) {
+                        console.error('Failed to delete storage file:', e);
+                    }
+                };
+
+                // Delete primary image_url
+                if (listingToDelete.image_url) {
+                    if (listingToDelete.image_url.startsWith('http')) {
+                        await deleteStorageFile(listingToDelete.image_url);
+                    } else {
+                        await supabase.storage.from('listing-images').remove([listingToDelete.image_url]);
+                    }
+                }
+
+                // Delete secondary image_urls
+                if (listingToDelete.image_urls && Array.isArray(listingToDelete.image_urls)) {
+                    for (const imgUrl of listingToDelete.image_urls) {
+                        if (imgUrl.startsWith('http')) {
+                            await deleteStorageFile(imgUrl);
+                        } else {
+                            await supabase.storage.from('listing-images').remove([imgUrl]);
+                        }
+                    }
+                }
+            }
+
+            // 2. Direct Supabase database call to delete the listing from 'listings' table
+            const { error } = await supabase
+                .from('listings')
+                .delete()
+                .eq('id', listingId);
+
+            // 3. Catch silent failures (like Supabase Row-Level Security blocks)
+            if (error) {
+                console.error('CRITICAL: Supabase delete failed:', error.message);
+                alert(`Database error: ${error.message}. Check your Supabase RLS policies!`);
+                return;
+            }
+
+            // 4. Update the local layout state only AFTER backend confirms deletion
+            setListings((prev) => prev.filter((item) => item.id !== listingId));
+
+            // 5. Purge server-side cache and refresh route data so it reflects on home page
+            await revalidateListings();
+            router.refresh();
+
+            alert('Listing permanently deleted!');
+        } catch (err: any) {
+            console.error('Unexpected error during deletion:', err);
+            alert(err.message || 'Error deleting listing. Please try again.');
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     useEffect(() => {
         async function loadDashboardData() {
@@ -41,7 +120,7 @@ export default function DashboardPage() {
                 const { data: userListings } = await supabase
                     .from('listings')
                     .select('*')
-                    .eq('seller_id', user.id) // Fixed: Changed from user_id to seller_id
+                    .eq('seller_id', user.id)
                     .order('created_at', { ascending: false });
 
                 if (userListings) {
@@ -66,7 +145,6 @@ export default function DashboardPage() {
             setUploadingAvatar(true);
             const file = e.target.files[0];
             const fileExt = file.name.split('.').pop();
-            // Saved directly in root directory of bucket
             const filePath = `avatar-${profile.id}-${Date.now()}.${fileExt}`;
 
             // Upload directly to root of 'listing-images' bucket
@@ -197,18 +275,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Dynamic Analytics Stats Panel */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                        { label: 'Your Active Items', value: listings.length },
-                        { label: 'Total Views', value: '0' },
-                        { label: 'Offers Received', value: '0' },
-                        { label: 'Items Sold', value: '0' },
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-1">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                            <p className="text-2xl font-extrabold text-slate-900">{stat.value}</p>
-                        </div>
-                    ))}
+                <div className="flex justify-start">
+                    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-1 w-full sm:w-72">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Your Active Items</p>
+                        <p className="text-2xl font-extrabold text-slate-900">{listings.length}</p>
+                    </div>
                 </div>
 
                 {/* Marketplace Management Layout */}
@@ -240,6 +311,26 @@ export default function DashboardPage() {
                                         <span className="absolute top-3 left-3 text-[10px] uppercase font-bold tracking-wider bg-white px-2 py-0.5 rounded-md shadow-sm text-slate-600 border border-gray-100">
                                             {item.category}
                                         </span>
+
+                                        {/* Delete Button Overlay */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handleDeleteListing(item.id);
+                                            }}
+                                            className="absolute top-3 right-3 p-2 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 rounded-lg shadow-sm border border-gray-100 transition-colors cursor-pointer"
+                                            aria-label="Delete listing"
+                                            disabled={deletingId === item.id}
+                                        >
+                                            {deletingId === item.id ? (
+                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                                            ) : (
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            )}
+                                        </button>
                                     </div>
                                     <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
                                         <div>
