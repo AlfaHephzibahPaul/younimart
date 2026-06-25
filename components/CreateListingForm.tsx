@@ -146,7 +146,7 @@ export default function CreateListingForm({
         const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("listing-photos")
+          .from("listing-images")
           .upload(filePath, file, {
             cacheControl: "3600",
             upsert: false,
@@ -158,7 +158,7 @@ export default function CreateListingForm({
 
         // Get public URL
         const { data: urlData } = supabase.storage
-          .from("listing-photos")
+          .from("listing-images")
           .getPublicUrl(filePath);
 
         if (!urlData?.publicUrl) {
