@@ -181,7 +181,7 @@ export default function CreateListingForm({
           price: priceNum,
           category,
           condition,
-          photos: uploadedUrls, // using verified column name 'photos'
+          image_urls: uploadedUrls,
           status: "draft",
         })
         .select("id")
