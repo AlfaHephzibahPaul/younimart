@@ -137,8 +137,12 @@ export default function CreateListingPage() {
             throw new Error(`Storage Upload Failed for image ${index + 1}: ${uploadError.message}`);
           }
 
-          // 🛠️ Save ONLY the path filename relative to the bucket storage system
-          uploadedImageNames.push(fileName);
+          // Resolve the bare storage path into a full public URL before saving
+          const { data: urlData } = supabase.storage
+            .from(targetBucket)
+            .getPublicUrl(fileName);
+
+          uploadedImageNames.push(urlData.publicUrl);
         })
       );
 
