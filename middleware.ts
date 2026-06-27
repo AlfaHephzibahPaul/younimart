@@ -8,8 +8,9 @@ const PUBLIC_ROUTES = [
   "/signup",
   "/verify",
   "/resubmit-verification",
+  "/forgot-password",
+  "/reset-password",
 ];
-
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => {
     if (route === "/") {
