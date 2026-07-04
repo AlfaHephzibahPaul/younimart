@@ -90,7 +90,12 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
                         </div>
 
                         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                            <p className="text-xs text-gray-400 mb-4">Posted by {sellerName}</p>
+                           <p className="text-xs text-gray-400 mb-4">
+                              Posted by{" "}
+                              <Link href={`/sellers/${listing.seller_id}`} className="text-brand-green font-semibold hover:underline">
+                                {sellerName}
+                              </Link>
+                            </p>
 
                             {whatsappUrl ? (
                                 <a

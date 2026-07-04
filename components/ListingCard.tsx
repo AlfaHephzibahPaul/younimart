@@ -85,7 +85,13 @@ const imageUrl = listing.image_urls?.[0];
         </p>
         <p className="text-xs text-gray-500" style={{ textAlign: 'left' }}>{listing.category}</p>
         <div className="mt-auto flex items-center justify-between pt-2 text-xs text-gray-500">
-          <span className="truncate">{sellerName}</span>
+         <Link
+            href={`/sellers/${listing.seller_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="truncate hover:text-brand-green hover:underline transition-colors"
+          >
+            {sellerName}
+          </Link>
           <span className="shrink-0">{formatTimeAgo(listing.created_at)}</span>
         </div>
       </div>

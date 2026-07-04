@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = [
   "/resubmit-verification",
   "/forgot-password",
   "/reset-password",
+  "/sellers",
 ];
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => {
