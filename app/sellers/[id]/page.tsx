@@ -152,7 +152,8 @@ export default async function SellerProfilePage({ params }: SellerPageProps) {
             </div>
 
             {/* WhatsApp Button */}
-           {whatsappUrl && (
+          {/* WhatsApp Button */}
+            {whatsappUrl && (
               
                 href={whatsappUrl}
                 target="_blank"
@@ -162,7 +163,6 @@ export default async function SellerProfilePage({ params }: SellerPageProps) {
                 WhatsApp
               </a>
             )}
-          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
