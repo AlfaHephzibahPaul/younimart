@@ -13,30 +13,24 @@ type SellerPageProps = {
 
 async function getSellerData(id: string) {
   const supabase = await createClient();
-
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, full_name, avatar_url, is_verified, created_at, whatsapp")
     .eq("id", id)
     .single();
-
   if (profileError || !profile) return null;
-
   const { data: listings } = await supabase
     .from("listings")
     .select("*, seller:profiles!seller_id(full_name, is_verified)")
     .eq("seller_id", id)
     .eq("status", "active")
     .order("created_at", { ascending: false });
-
   const { data: reviews } = await supabase
     .from("seller_reviews")
     .select("id, rating, comment, created_at, reviewer:profiles!reviewer_id(full_name, avatar_url)")
     .eq("seller_id", id)
     .order("created_at", { ascending: false });
-
   const { data: { user } } = await supabase.auth.getUser();
-
   let userReview = null;
   if (user) {
     const { data } = await supabase
@@ -47,11 +41,9 @@ async function getSellerData(id: string) {
       .single();
     userReview = data;
   }
-
   const avgRating = reviews && reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : null;
-
   return { profile, listings: listings ?? [], reviews: reviews ?? [], user, userReview, avgRating };
 }
 
@@ -71,62 +63,38 @@ function StarDisplay({ rating, size = "md" }: { rating: number; size?: "sm" | "m
 export default async function SellerProfilePage({ params }: SellerPageProps) {
   const { id } = await params;
   const data = await getSellerData(id);
-
   if (!data) notFound();
-
   const { profile, listings, reviews, user, userReview, avgRating } = data;
-
   const whatsappUrl = profile.whatsapp
-    ? `https://wa.me/${profile.whatsapp.toString().replace(/[^\d+]/g, "")}?text=${encodeURIComponent(`Hello ${profile.full_name}, I found your profile on YOUnimart and I'd like to connect.`)}`
+    ? `https://wa.me/${profile.whatsapp.toString().replace(/[^\d+]/g, "")}?text=${encodeURIComponent(`Hello ${profile.full_name}, I found your profile on YOUnimart.`)}`
     : null;
-
   const canReview = !!user && user.id !== profile.id && !userReview;
-
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-8 md:px-6">
-
-        {/* Profile Card */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm mb-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-
-            {/* Avatar */}
             <div className="relative shrink-0">
               {profile.avatar_url ? (
-                <Image
-                  src={profile.avatar_url}
-                  alt={profile.full_name}
-                  width={96}
-                  height={96}
-                  className="rounded-full object-cover w-24 h-24 border-2 border-brand-green"
-                  unoptimized
-                />
+                <Image src={profile.avatar_url} alt={profile.full_name} width={96} height={96} className="rounded-full object-cover w-24 h-24 border-2 border-brand-green" unoptimized />
               ) : (
                 <div className="w-24 h-24 rounded-full bg-brand-green/10 border-2 border-brand-green flex items-center justify-center text-brand-green font-bold text-3xl">
                   {profile.full_name?.[0]?.toUpperCase() ?? "?"}
                 </div>
               )}
               {profile.is_verified && (
-                <span className="absolute -bottom-1 -right-1 bg-brand-green text-white text-xs rounded-full w-6 h-6 flex items-center justify-center" title="Verified Student">
-                  ✓
-                </span>
+                <span className="absolute -bottom-1 -right-1 bg-brand-green text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">?</span>
               )}
             </div>
-
-            {/* Info */}
             <div className="flex-1 text-center sm:text-left">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <h1 className="text-2xl font-extrabold text-gray-900">{profile.full_name}</h1>
                 {profile.is_verified && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 border border-green-200">
-                    ✓ Verified Student
-                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 border border-green-200">? Verified Student</span>
                 )}
               </div>
-
               <p className="text-sm text-gray-400 mt-1">Member since {formatTimeAgo(profile.created_at)}</p>
-
               <div className="flex items-center gap-2 mt-3 justify-center sm:justify-start">
                 {avgRating !== null ? (
                   <>
@@ -138,7 +106,6 @@ export default async function SellerProfilePage({ params }: SellerPageProps) {
                   <span className="text-sm text-gray-400">No reviews yet</span>
                 )}
               </div>
-
               <div className="flex gap-4 mt-3 justify-center sm:justify-start">
                 <div className="text-center">
                   <p className="text-lg font-bold text-brand-green">{listings.length}</p>
@@ -150,28 +117,16 @@ export default async function SellerProfilePage({ params }: SellerPageProps) {
                 </div>
               </div>
             </div>
-
-            {/* WhatsApp Button */}
-          {/* WhatsApp Button */}
             {whatsappUrl && (
-              
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 flex items-center gap-2 rounded-xl bg-brand-green px-5 py-3 text-white font-semibold text-sm hover:bg-green-800 transition-colors"
-              >
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-xl bg-brand-green px-5 py-3 text-white font-semibold text-sm hover:bg-green-800 transition-colors">
                 WhatsApp
               </a>
             )}
+          </div>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* Listings */}
           <div className="lg:col-span-2">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
-              Active Listings <span className="text-gray-400 font-normal text-base">({listings.length})</span>
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Active Listings <span className="text-gray-400 font-normal text-base">({listings.length})</span></h2>
             {listings.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
                 {listings.map((listing: any) => (
@@ -179,37 +134,23 @@ export default async function SellerProfilePage({ params }: SellerPageProps) {
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
-                This seller has no active listings right now.
-              </div>
+              <div className="rounded-xl border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-400">This seller has no active listings right now.</div>
             )}
           </div>
-
-          {/* Reviews */}
           <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
-              Reviews <span className="text-gray-400 font-normal text-base">({reviews.length})</span>
-            </h2>
-
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Reviews <span className="text-gray-400 font-normal text-base">({reviews.length})</span></h2>
             {canReview && <SellerReviewForm sellerId={profile.id} />}
-
             {!user && (
               <div className="rounded-xl border border-dashed border-gray-200 bg-white p-4 text-center text-sm text-gray-500 mb-4">
                 <Link href="/login" className="text-brand-green font-semibold hover:underline">Sign in</Link> to leave a review
               </div>
             )}
-
             {userReview && (
-              <div className="rounded-xl bg-green-50 border border-green-200 p-4 mb-4 text-sm text-green-700">
-                ✓ You already reviewed this seller
-              </div>
+              <div className="rounded-xl bg-green-50 border border-green-200 p-4 mb-4 text-sm text-green-700">? You already reviewed this seller</div>
             )}
-
             <div className="space-y-3">
               {reviews.length === 0 && (
-                <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400">
-                  No reviews yet. Be the first!
-                </div>
+                <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400">No reviews yet. Be the first!</div>
               )}
               {reviews.map((review: any) => (
                 <div key={review.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -223,9 +164,7 @@ export default async function SellerProfilePage({ params }: SellerPageProps) {
                     </div>
                   </div>
                   <StarDisplay rating={review.rating} size="sm" />
-                  {review.comment && (
-                    <p className="mt-2 text-sm text-gray-600">{review.comment}</p>
-                  )}
+                  {review.comment && <p className="mt-2 text-sm text-gray-600">{review.comment}</p>}
                 </div>
               ))}
             </div>
